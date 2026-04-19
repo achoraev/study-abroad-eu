@@ -8,13 +8,14 @@ import LanguageSwitcher from './LanguageSwitcher';
 type DropdownItem = { label: string; href: string };
 type NavItem = { label: string; href: string; children?: DropdownItem[] };
 
-function NavDropdown({ item }: { item: NavItem }) {
+function NavDropdown({ item, onClose }: { item: NavItem; onClose?: () => void }) {
   const [open, setOpen] = useState(false);
 
   if (!item.children) {
     return (
       <Link
         href={item.href}
+        onClick={onClose}
         className="text-slate-700 hover:text-blue-700 font-medium text-xs whitespace-nowrap"
       >
         {item.label}
@@ -38,14 +39,13 @@ function NavDropdown({ item }: { item: NavItem }) {
       </button>
       {open && (
         <>
-          {/* invisible backdrop to close on outside click */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[220px] z-50">
             {item.children.map((child) => (
               <a
                 key={child.href}
                 href={child.href}
-                onClick={() => setOpen(false)}
+                onClick={() => { setOpen(false); onClose?.(); }}
                 className="block px-4 py-2 text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-700"
               >
                 {child.label}
@@ -58,8 +58,56 @@ function NavDropdown({ item }: { item: NavItem }) {
   );
 }
 
+function MobileNavItem({ item, onClose }: { item: NavItem; onClose: () => void }) {
+  const [open, setOpen] = useState(false);
+
+  if (!item.children) {
+    return (
+      <a
+        href={item.href}
+        onClick={onClose}
+        className="block px-4 py-3 text-slate-700 font-medium border-b border-slate-100"
+      >
+        {item.label}
+      </a>
+    );
+  }
+
+  return (
+    <div className="border-b border-slate-100">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center justify-between w-full px-4 py-3 text-slate-700 font-medium"
+      >
+        {item.label}
+        <svg
+          className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className="bg-slate-50 pb-1">
+          {item.children.map((child) => (
+            <a
+              key={child.href}
+              href={child.href}
+              onClick={onClose}
+              className="block px-8 py-2 text-sm text-slate-600 hover:text-blue-700"
+            >
+              {child.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Navbar() {
   const t = useTranslations('Navbar');
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems: NavItem[] = [
     {
@@ -125,24 +173,55 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Nav items */}
+        {/* Desktop nav items */}
         <div className="hidden lg:flex items-center gap-3 flex-1 justify-center">
           {navItems.map((item) => (
             <NavDropdown key={item.label} item={item} />
           ))}
         </div>
 
-        {/* Right side: language + contact */}
+        {/* Right side: language + contact + hamburger */}
         <div className="flex items-center gap-3 shrink-0">
           <LanguageSwitcher />
           <a
             href="#contact"
-            className="bg-blue-700 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-blue-800 transition-all whitespace-nowrap"
+            className="hidden sm:block bg-blue-700 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-blue-800 transition-all whitespace-nowrap"
           >
             {t('apply')}
           </a>
+          {/* Hamburger button — visible below lg */}
+          <button
+            onClick={() => setMobileOpen((o) => !o)}
+            className="lg:hidden flex flex-col justify-center items-center w-9 h-9 gap-1.5"
+            aria-label="Toggle menu"
+          >
+            <span className={`block w-6 h-0.5 bg-slate-700 transition-all ${mobileOpen ? 'rotate-45 translate-y-2' : ''}`} />
+            <span className={`block w-6 h-0.5 bg-slate-700 transition-all ${mobileOpen ? 'opacity-0' : ''}`} />
+            <span className={`block w-6 h-0.5 bg-slate-700 transition-all ${mobileOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu drawer */}
+      {mobileOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setMobileOpen(false)} />
+          <div className="absolute top-full left-0 right-0 z-50 bg-white shadow-lg max-h-[80vh] overflow-y-auto">
+            {navItems.map((item) => (
+              <MobileNavItem key={item.label} item={item} onClose={() => setMobileOpen(false)} />
+            ))}
+            <div className="px-4 py-4">
+              <a
+                href="#contact"
+                onClick={() => setMobileOpen(false)}
+                className="block w-full text-center bg-blue-700 text-white px-4 py-3 rounded-full font-semibold text-sm hover:bg-blue-800 transition-all"
+              >
+                {t('apply')}
+              </a>
+            </div>
+          </div>
+        </>
+      )}
     </nav>
   );
 }
